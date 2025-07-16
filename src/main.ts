@@ -10,26 +10,28 @@ function noSearchDefaultPageRender() {
     .sort((a, b) => a.s.localeCompare(b.s));
 
   app.innerHTML = `
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
-      <div class="content-container">
-        <h1>Und*ck</h1>
-        <p>DuckDuckGo's bang redirects are too slow. Add the following URL as a custom search engine to your browser. Enables <a href="https://duckduckgo.com/bang.html" target="_blank">all of DuckDuckGo's bangs.</a></p>
-        <div style="margin-bottom: 1rem;">
-          <label for="bang-picker" style="font-weight: 500; margin-right: 0.5rem;">Pick your default bang:</label>
-          <select id="bang-picker">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg, #fafbfc);">
+      <div class="content-container" style="background: white; border-radius: 12px; box-shadow: 0 2px 16px #0001; padding: 2rem 2.5rem; max-width: 36rem; width: 100%; margin: 2rem 0;">
+        <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Und*ck</h1>
+        <p style="margin-bottom: 1.5rem;">DuckDuckGo's bang redirects are too slow. Add the following URL as a custom search engine to your browser. Enables <a href="https://duckduckgo.com/bang.html" target="_blank">all of DuckDuckGo's bangs.</a></p>
+        <div style="margin-bottom: 1.5rem;">
+          <label for="bang-search" style="font-weight: 500; margin-bottom: 0.25rem; display: block;">Pick your default bang:</label>
+          <input id="bang-search" type="text" placeholder="Search for a bang (e.g. Google, !yt, Wikipedia)" style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 0.5rem; font-size: 1rem;" />
+          <select id="bang-picker" size="8" style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; background: #f8f8f8;">
             <option value="">Google (!g, default)</option>
             ${allBangs.map(b => `<option value="${b.t}">${b.s} (!${b.t})</option>`).join("")}
           </select>
         </div>
-        <div class="url-container"> 
+        <div class="url-container" style="margin-bottom: 1.5rem;"> 
           <input 
             type="text" 
             class="url-input"
+            style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 1.1rem; background: #f5f5f5; margin-bottom: 0.5rem;"
             value="https://unduck-me.vercel.app/?q=%s"
             readonly 
           />
-          <button class="copy-button">
-            <img src="/clipboard.svg" alt="Copy" />
+          <button class="copy-button" style="padding: 10px 16px; border-radius: 6px; background: #f0f0f0; border: 1px solid #ddd; margin-left: 8px;">
+            <img src="/clipboard.svg" alt="Copy" style="width: 22px; height: 22px; vertical-align: middle;" />
           </button>
         </div>
       </div>
@@ -40,6 +42,7 @@ function noSearchDefaultPageRender() {
   const copyIcon = copyButton.querySelector("img")!;
   const urlInput = app.querySelector<HTMLInputElement>(".url-input")!;
   const bangPicker = app.querySelector<HTMLSelectElement>("#bang-picker")!;
+  const bangSearch = app.querySelector<HTMLInputElement>("#bang-search")!;
 
   function updateUrlInput() {
     const selected = bangPicker.value;
@@ -51,6 +54,17 @@ function noSearchDefaultPageRender() {
   }
 
   bangPicker.addEventListener("change", updateUrlInput);
+
+  bangSearch.addEventListener("input", () => {
+    const search = bangSearch.value.trim().toLowerCase();
+    bangPicker.innerHTML = `<option value="">Google (!g, default)</option>` +
+      allBangs
+        .filter(b => b.s.toLowerCase().includes(search) || b.t.toLowerCase().includes(search))
+        .map(b => `<option value="${b.t}">${b.s} (!${b.t})</option>`)
+        .join("");
+    bangPicker.selectedIndex = 0;
+    updateUrlInput();
+  });
 
   copyButton.addEventListener("click", async () => {
     await navigator.clipboard.writeText(urlInput.value);
