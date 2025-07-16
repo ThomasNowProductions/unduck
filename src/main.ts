@@ -10,30 +10,45 @@ function noSearchDefaultPageRender() {
     .sort((a, b) => a.s.localeCompare(b.s));
 
   app.innerHTML = `
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
-      <div class="content-container">
-        <h1>Und*ck</h1>
-        <p>DuckDuckGo's bang redirects are too slow. Add the following URL as a custom search engine to your browser. Enables <a href="https://duckduckgo.com/bang.html" target="_blank">all of DuckDuckGo's bangs.</a></p>
-        <div class="url-container" style="flex-direction: column; align-items: stretch; gap: 8px; margin-top: 16px; margin-bottom: 8px;">
-          <input id="bang-search" type="text" placeholder="Search for a bang (e.g. Google, !yt, Wikipedia)" style="margin-bottom: 4px;" class="url-input" />
-          <select id="bang-picker" class="url-input" size="6" style="margin-bottom: 4px;">
-            <option value="">Google (!g, default)</option>
-            ${allBangs.map(b => `<option value="${b.t}">${b.s} (!${b.t})</option>`).join("")}
-          </select>
-        </div>
-        <div class="url-container"> 
-          <input 
-            type="text" 
-            class="url-input"
-            id="output-url"
-            value="https://unduck-me.vercel.app/?q=%s"
-            readonly 
-          />
-          <button class="copy-button">
-            <img src="/clipboard.svg" alt="Copy" />
-          </button>
+    <div class="main-bg">
+      <div class="card-container">
+        <header class="header">
+          <img src="/search.svg" alt="Unduck logo" class="logo" />
+          <div>
+            <h1 class="title">Und*ck</h1>
+            <p class="tagline">A better default search engine <span class="accent">with bangs!</span></p>
+          </div>
+        </header>
+        <div class="content-container">
+          <p class="desc">DuckDuckGo's bang redirects are too slow. Add the following URL as a custom search engine to your browser. Enables <a href="https://duckduckgo.com/bang.html" target="_blank">all of DuckDuckGo's bangs.</a></p>
+          <div class="url-container vertical">
+            <div class="input-group">
+              <span class="input-icon"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+              <input id="bang-search" type="text" placeholder="Search for a bang (e.g. Google, !yt, Wikipedia)" class="url-input with-icon" />
+            </div>
+            <select id="bang-picker" class="url-input" size="6">
+              <option value="">Google (!g, default)</option>
+              ${allBangs.map(b => `<option value="${b.t}">${b.s} (!${b.t})</option>`).join("")}
+            </select>
+          </div>
+          <div class="url-container"> 
+            <input 
+              type="text" 
+              class="url-input"
+              id="output-url"
+              value="https://unduck-me.vercel.app/?q=%s"
+              readonly 
+            />
+            <button class="copy-button" title="Copy URL">
+              <img src="/clipboard.svg" alt="Copy" />
+            </button>
+          </div>
         </div>
       </div>
+      <div class="toast" id="toast" style="display:none"></div>
+      <footer class="footer">
+        <span>Made by <a href="https://github.com/t3dotgg/unduck" target="_blank">t3dotgg</a> and modified by <a href="https://github.com/thomasnowproductions/unduck" target="_blank">ThomasNow Productions</a></span>
+      </footer>
     </div>
   `;
 
@@ -42,6 +57,7 @@ function noSearchDefaultPageRender() {
   const urlInput = app.querySelector<HTMLInputElement>("#output-url")!;
   const bangPicker = app.querySelector<HTMLSelectElement>("#bang-picker")!;
   const bangSearch = app.querySelector<HTMLInputElement>("#bang-search")!;
+  const toast = app.querySelector<HTMLDivElement>("#toast")!;
 
   function updateUrlInput() {
     const selected = bangPicker.value;
@@ -87,9 +103,13 @@ function noSearchDefaultPageRender() {
   copyButton.addEventListener("click", async () => {
     await navigator.clipboard.writeText(urlInput.value);
     copyIcon.src = "/clipboard-check.svg";
-
+    toast.textContent = "Copied!";
+    toast.style.display = "block";
+    toast.classList.add("show");
     setTimeout(() => {
       copyIcon.src = "/clipboard.svg";
+      toast.classList.remove("show");
+      toast.style.display = "none";
     }, 2000);
   });
 }
