@@ -44,9 +44,6 @@ function noSearchDefaultPageRender() {
   });
 }
 
-const LS_DEFAULT_BANG = localStorage.getItem("default-bang") ?? "g";
-const defaultBang = bangs.find((b) => b.t === LS_DEFAULT_BANG);
-
 function getBangredirectUrl() {
   const url = new URL(window.location.href);
   const query = url.searchParams.get("q")?.trim() ?? "";
@@ -56,14 +53,26 @@ function getBangredirectUrl() {
   }
 
   const match = query.match(/!(\S+)/i);
-
   const bangCandidate = match?.[1]?.toLowerCase();
-  const selectedBang = bangs.find((b) => b.t === bangCandidate) ?? defaultBang;
+
+  // Get defaultBang from URL param if present
+  const urlDefaultBang = url.searchParams.get("defaultBang")?.toLowerCase();
+  const urlDefaultBangObj = urlDefaultBang ? bangs.find((b) => b.t === urlDefaultBang) : undefined;
+
+  // Get defaultBang from localStorage or fallback to 'g'
+  const LS_DEFAULT_BANG = localStorage.getItem("default-bang") ?? "g";
+  const localStorageDefaultBangObj = bangs.find((b) => b.t === LS_DEFAULT_BANG);
+
+  // Precedence: explicit bang > url param > localStorage > 'g'
+  const selectedBang =
+    bangs.find((b) => b.t === bangCandidate) ||
+    urlDefaultBangObj ||
+    localStorageDefaultBangObj;
 
   // Remove the first bang from the query
   const cleanQuery = query.replace(/!\S+\s*/i, "").trim();
 
-  // If the query is just `!gh`, use `github.com` instead of `github.com/search?q=`
+  // If the query is just a bang, use the domain
   if (cleanQuery === "")
     return selectedBang ? `https://${selectedBang.d}` : null;
 
