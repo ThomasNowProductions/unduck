@@ -25,6 +25,7 @@ function noSearchDefaultPageRender() {
           <input 
             type="text" 
             class="url-input"
+            id="output-url"
             value="https://unduck-me.vercel.app/?q=%s"
             readonly 
           />
@@ -45,7 +46,7 @@ function noSearchDefaultPageRender() {
 
   const copyButton = app.querySelector<HTMLButtonElement>(".copy-button")!;
   const copyIcon = copyButton.querySelector("img")!;
-  const urlInput = app.querySelector<HTMLInputElement>(".url-input")!;
+  const urlInput = app.querySelector<HTMLInputElement>("#output-url")!;
   const bangPicker = app.querySelector<HTMLSelectElement>("#bang-picker")!;
   const bangSearch = app.querySelector<HTMLInputElement>("#bang-search")!;
 
