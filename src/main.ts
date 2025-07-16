@@ -3,11 +3,24 @@ import "./global.css";
 
 function noSearchDefaultPageRender() {
   const app = document.querySelector<HTMLDivElement>("#app")!;
+
+  // Use all bangs, sorted alphabetically by their display name
+  const allBangs = bangs
+    .map(b => ({ t: b.t, s: b.s }))
+    .sort((a, b) => a.s.localeCompare(b.s));
+
   app.innerHTML = `
     <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
       <div class="content-container">
         <h1>Und*ck</h1>
         <p>DuckDuckGo's bang redirects are too slow. Add the following URL as a custom search engine to your browser. Enables <a href="https://duckduckgo.com/bang.html" target="_blank">all of DuckDuckGo's bangs.</a></p>
+        <div style="margin-bottom: 1rem;">
+          <label for="bang-picker" style="font-weight: 500; margin-right: 0.5rem;">Pick your default bang:</label>
+          <select id="bang-picker">
+            <option value="">Google (!g, default)</option>
+            ${allBangs.map(b => `<option value="${b.t}">${b.s} (!${b.t})</option>`).join("")}
+          </select>
+        </div>
         <div class="url-container"> 
           <input 
             type="text" 
@@ -33,6 +46,18 @@ function noSearchDefaultPageRender() {
   const copyButton = app.querySelector<HTMLButtonElement>(".copy-button")!;
   const copyIcon = copyButton.querySelector("img")!;
   const urlInput = app.querySelector<HTMLInputElement>(".url-input")!;
+  const bangPicker = app.querySelector<HTMLSelectElement>("#bang-picker")!;
+
+  function updateUrlInput() {
+    const selected = bangPicker.value;
+    let url = "https://unduck-me.vercel.app/?q=%s";
+    if (selected && selected !== "g") {
+      url += `&defaultBang=${selected}`;
+    }
+    urlInput.value = url;
+  }
+
+  bangPicker.addEventListener("change", updateUrlInput);
 
   copyButton.addEventListener("click", async () => {
     await navigator.clipboard.writeText(urlInput.value);
