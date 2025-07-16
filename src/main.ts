@@ -58,7 +58,7 @@ function noSearchDefaultPageRender() {
     const search = bangSearch.value.trim().toLowerCase();
     bangPicker.innerHTML = `<option value=\"\">Google (!g, default)</option>` +
       allBangs
-        .filter(b => b.s.toLowerCase().includes(search) || b.t.toLowerCase().includes(search))
+        .filter(b => search === "" || b.s.toLowerCase().includes(search) || b.t.toLowerCase().includes(search))
         .map(b => `<option value=\"${b.t}\">${b.s} (!${b.t})</option>`)
         .join("");
     bangPicker.selectedIndex = 0;
