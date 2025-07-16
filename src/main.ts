@@ -56,11 +56,30 @@ function noSearchDefaultPageRender() {
 
   bangSearch.addEventListener("input", () => {
     const search = bangSearch.value.trim().toLowerCase();
-    bangPicker.innerHTML = `<option value=\"\">Google (!g, default)</option>` +
-      allBangs
-        .filter(b => search === "" || b.s.toLowerCase().includes(search) || b.t.toLowerCase().includes(search))
-        .map(b => `<option value=\"${b.t}\">${b.s} (!${b.t})</option>`)
+    // Allow searching by bang with or without '!'
+    const normalizedSearch = search.startsWith("!") ? search.slice(1) : search;
+
+    // Find exact match first
+    const exactMatch = allBangs.filter(b => b.t.toLowerCase() === normalizedSearch);
+    // Then find partial matches, excluding the exact match
+    const partialMatches = allBangs.filter(b =>
+      (search === "" ||
+        b.s.toLowerCase().includes(search) ||
+        b.t.toLowerCase().includes(normalizedSearch)) &&
+      b.t.toLowerCase() !== normalizedSearch
+    );
+    const filteredBangs = [...exactMatch, ...partialMatches];
+
+    let optionsHtml = `<option value="">Google (!g, default)</option>`;
+    if (filteredBangs.length > 0) {
+      optionsHtml += filteredBangs
+        .map(b => `<option value="${b.t}">${b.s} (!${b.t})</option>`)
         .join("");
+    } else {
+      // Styled 'No bangs found' option
+      optionsHtml += `<option value="" disabled style="color: #888; font-style: italic; background: #f8d7da; color: #721c24;">No bangs found</option>`;
+    }
+    bangPicker.innerHTML = optionsHtml;
     bangPicker.selectedIndex = 0;
     updateUrlInput();
   });
