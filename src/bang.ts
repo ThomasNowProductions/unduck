@@ -12,6 +12,15 @@ export const bangs = [
   },
   {
     c: "AI",
+    d: "chat.openai.com",
+    r: 0,
+    s: "ChatGPT",
+    sc: "AI",
+    t: "chatgpt",
+    u: "https://chat.openai.com/?q={{{s}}}",
+  },
+  {
+    c: "AI",
     d: "www.perplexity.ai",
     r: 0,
     s: "Perplexity",
