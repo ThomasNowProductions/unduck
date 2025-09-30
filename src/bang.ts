@@ -29,6 +29,15 @@ export const bangs = [
     u: "https://www.perplexity.ai/search?q={{{s}}}",
   },
   {
+    c: "AI",
+    d: "scira.ai",
+    r: 0,
+    s: "Scira AI",
+    sc: "AI",
+    t: "scira",
+    u: "https://scira.ai?q={{{s}}}",
+  },
+  {
     c: "Tech",
     d: "www.01net.com",
     r: 4,
