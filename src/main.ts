@@ -12,8 +12,10 @@ function renderMainPage() {
       <div class="search-container">
         <div class="search-header">
           <img src="/search.svg" alt="Unduck logo" class="logo" />
-          <h1 class="title">Und*ck</h1>
-          <p class="tagline">Search with bangs!</p>
+          <div class="title-section">
+            <h1 class="title">Und*ck</h1>
+            <p class="tagline">Search with bangs!</p>
+          </div>
         </div>
         <div class="search-box-container">
           <div class="input-group search-input-group">
