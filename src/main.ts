@@ -1,47 +1,24 @@
 import { bangs } from "./bang";
 import "./global.css";
 
-function noSearchDefaultPageRender() {
+function renderMainPage() {
   const app = document.querySelector<HTMLDivElement>("#app")!;
-
-  // Use all bangs, sorted alphabetically by their display name
-  const allBangs = bangs
-    .map(b => ({ t: b.t, s: b.s }))
-    .sort((a, b) => a.s.localeCompare(b.s));
 
   app.innerHTML = `
     <div class="main-bg">
-      <div class="card-container">
-        <header class="header">
+      <button id="settings-link" class="settings-button-top" title="Settings">
+        <img src="/settings.svg" alt="Settings" />
+      </button>
+      <div class="search-container">
+        <div class="search-header">
           <img src="/search.svg" alt="Unduck logo" class="logo" />
-          <div>
-            <h1 class="title">Und*ck</h1>
-            <p class="tagline">A better default search engine <span class="accent">with bangs!</span></p>
-          </div>
-        </header>
-        <div class="content-container">
-          <p class="desc">DuckDuckGo's bang redirects are too slow. Add the following URL as a custom search engine to your browser. Enables <a href="https://duckduckgo.com/bang.html" target="_blank">all of DuckDuckGo's bangs.</a></p>
-          <div class="url-container vertical">
-            <div class="input-group">
-              <span class="input-icon"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-              <input id="bang-search" type="text" placeholder="Search for a bang (e.g. Google, !yt, Wikipedia)" class="url-input with-icon" />
-            </div>
-            <select id="bang-picker" class="url-input" size="6">
-              <option value="">Google (!g, default)</option>
-              ${allBangs.map(b => `<option value="${b.t}">${b.s} (!${b.t})</option>`).join("")}
-            </select>
-          </div>
-          <div class="url-container"> 
-            <input 
-              type="text" 
-              class="url-input"
-              id="output-url"
-              value="https://unduck-me.vercel.app/?q=%s"
-              readonly 
-            />
-            <button class="copy-button" title="Copy URL">
-              <img src="/clipboard.svg" alt="Copy" />
-            </button>
+          <h1 class="title">Und*ck</h1>
+          <p class="tagline">Search with bangs!</p>
+        </div>
+        <div class="search-box-container">
+          <div class="input-group search-input-group">
+            <span class="input-icon"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+            <input id="main-search" type="text" placeholder="Search the web (try !g for Google, !yt for YouTube, etc.)" class="search-input with-icon" autofocus />
           </div>
         </div>
       </div>
@@ -51,6 +28,127 @@ function noSearchDefaultPageRender() {
       </footer>
     </div>
   `;
+
+  const searchInput = app.querySelector<HTMLInputElement>("#main-search")!;
+  const settingsLink = app.querySelector<HTMLButtonElement>("#settings-link")!;
+  const toast = app.querySelector<HTMLDivElement>("#toast")!;
+
+  function performSearch() {
+    const query = searchInput.value.trim();
+    if (query) {
+      window.location.href = `/?q=${encodeURIComponent(query)}`;
+    }
+  }
+
+  searchInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      performSearch();
+    }
+  });
+
+  settingsLink.addEventListener("click", () => {
+    renderSettingsPage();
+  });
+}
+
+function renderSettingsPage() {
+  const app = document.querySelector<HTMLDivElement>("#app")!;
+
+  // Use all bangs, sorted alphabetically by their display name
+  const allBangs = bangs
+    .map(b => ({ t: b.t, s: b.s }))
+    .sort((a, b) => a.s.localeCompare(b.s));
+
+  app.innerHTML = `
+    <div class="settings-bg">
+      <div class="settings-container">
+        <header class="settings-header">
+          <button id="back-to-search" class="back-button">← Back to Search</button>
+          <div class="settings-title">
+            <img src="/search.svg" alt="Unduck logo" class="settings-logo" />
+            <div>
+              <h1 class="settings-title-text">Settings</h1>
+              <p class="settings-subtitle">Configure your search preferences</p>
+            </div>
+          </div>
+        </header>
+        <div class="settings-content">
+          <section class="settings-section">
+            <h2 class="settings-section-title">Search Engine Setup</h2>
+            <p class="settings-description">Add this URL as a custom search engine in your browser to enable fast bang searches.</p>
+
+            <div class="form-group">
+              <label class="form-label">Default Bang</label>
+              <input
+                type="text"
+                id="default-bang-input"
+                class="bang-input"
+                placeholder="e.g., g for Google, yt for YouTube, w for Wikipedia"
+                value=""
+              />
+              <small class="input-help">Enter the bang shortcut (without the ! symbol)</small>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Browser Search URL</label>
+              <div class="url-display-container">
+                <input
+                  type="text"
+                  class="url-display-input"
+                  id="output-url"
+                  value="https://unduck-me.vercel.app/?q=%s"
+                  readonly
+                />
+                <button class="copy-button" title="Copy URL">
+                  <img src="/clipboard.svg" alt="Copy" />
+                </button>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </div>
+      <div class="toast" id="toast" style="display:none"></div>
+    </div>
+  `;
+
+  const backButton = app.querySelector<HTMLButtonElement>("#back-to-search")!;
+  const copyButton = app.querySelector<HTMLButtonElement>(".copy-button")!;
+  const copyIcon = copyButton.querySelector("img")!;
+  const urlInput = app.querySelector<HTMLInputElement>("#output-url")!;
+  const defaultBangInput = app.querySelector<HTMLInputElement>("#default-bang-input")!;
+  const toast = app.querySelector<HTMLDivElement>("#toast")!;
+
+  function updateUrlInput() {
+    const bangValue = defaultBangInput.value.trim().toLowerCase();
+    let url = "https://unduck-me.vercel.app/?q=%s";
+    if (bangValue && bangValue !== "g") {
+      url += `&defaultBang=${bangValue}`;
+    }
+    urlInput.value = url;
+  }
+
+  defaultBangInput.addEventListener("input", updateUrlInput);
+
+  copyButton.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(urlInput.value);
+    copyIcon.src = "/clipboard-check.svg";
+    toast.textContent = "Copied!";
+    toast.style.display = "block";
+    toast.classList.add("show");
+    setTimeout(() => {
+      copyIcon.src = "/clipboard.svg";
+      toast.classList.remove("show");
+      toast.style.display = "none";
+    }, 2000);
+  });
+
+  backButton.addEventListener("click", () => {
+    renderMainPage();
+  });
+}
+
+function noSearchDefaultPageRender() {
 
   const copyButton = app.querySelector<HTMLButtonElement>(".copy-button")!;
   const copyIcon = copyButton.querySelector("img")!;
@@ -164,4 +262,24 @@ function doRedirect() {
   window.location.replace(searchUrl);
 }
 
-doRedirect();
+// Main routing logic
+function init() {
+  // Check if we're on the settings page (using hash routing)
+  if (window.location.hash === "#settings") {
+    renderSettingsPage();
+    return;
+  }
+
+  // Check if we have a search query to redirect
+  const url = new URL(window.location.href);
+  const query = url.searchParams.get("q")?.trim();
+
+  if (query) {
+    doRedirect();
+  } else {
+    // No query, show the main search page
+    renderMainPage();
+  }
+}
+
+init();
