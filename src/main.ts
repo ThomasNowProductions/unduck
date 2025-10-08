@@ -33,7 +33,6 @@ function renderMainPage() {
 
   const searchInput = app.querySelector<HTMLInputElement>("#main-search")!;
   const settingsLink = app.querySelector<HTMLButtonElement>("#settings-link")!;
-  const toast = app.querySelector<HTMLDivElement>("#toast")!;
 
   function performSearch() {
     const query = searchInput.value.trim();
@@ -51,15 +50,273 @@ function renderMainPage() {
   settingsLink.addEventListener("click", () => {
     renderSettingsPage();
   });
+
+  // Search suggestions functionality
+  let suggestionsContainer: HTMLDivElement | null = null;
+  let selectedSuggestionIndex = -1;
+
+  function createSuggestionsContainer() {
+    if (suggestionsContainer) return suggestionsContainer;
+
+    suggestionsContainer = document.createElement("div");
+    suggestionsContainer.className = "search-suggestions";
+    suggestionsContainer.style.cssText = `
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 2px solid #e0e0e0;
+      border-top: none;
+      border-radius: 0 0 16px 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+    `;
+
+    // Add dark mode styles
+    const darkModeStyles = document.createElement("style");
+    darkModeStyles.textContent = `
+      @media (prefers-color-scheme: dark) {
+        .search-suggestions {
+          background: #232323 !important;
+          border-color: #2d2d2d !important;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.3) !important;
+        }
+        .search-suggestion {
+          color: #fff !important;
+        }
+        .search-suggestion:hover,
+        .search-suggestion.selected {
+          background: #2d2d2d !important;
+        }
+        .search-suggestion-trigger {
+          color: #cccccc !important;
+        }
+        .search-suggestion-name {
+          color: #b0b0b0 !important;
+        }
+      }
+    `;
+    document.head.appendChild(darkModeStyles);
+
+    return suggestionsContainer;
+  }
+
+  function showSuggestions(suggestions: typeof bangs) {
+    if (suggestions.length === 0) {
+      hideSuggestions();
+      return;
+    }
+
+    const container = createSuggestionsContainer();
+    container.innerHTML = "";
+
+    suggestions.slice(0, 6).forEach((bang, index) => {
+      const suggestion = document.createElement("div");
+      suggestion.className = "search-suggestion";
+      (suggestion as HTMLElement).style.cssText = `
+        padding: 12px 20px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+      `;
+
+      suggestion.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span class="search-suggestion-trigger" style="font-family: monospace; font-weight: 600; color: #888888; min-width: 40px;">!${bang.t}</span>
+          <div style="flex: 1;">
+            <div class="search-suggestion-name" style="font-size: 14px; color: #6b6b6b; font-weight: 500;">${bang.s}</div>
+            ${bang.d ? `<div style="font-size: 12px; color: #888888; margin-top: 2px;">${bang.d}</div>` : ''}
+          </div>
+        </div>
+      `;
+
+      suggestion.addEventListener("mouseenter", () => {
+        selectedSuggestionIndex = index;
+        updateSuggestionSelection();
+      });
+
+      suggestion.addEventListener("mouseleave", () => {
+        if (selectedSuggestionIndex === index) {
+          selectedSuggestionIndex = -1;
+          updateSuggestionSelection();
+        }
+      });
+
+      suggestion.addEventListener("click", () => {
+        selectSuggestion(bang);
+      });
+
+      container.appendChild(suggestion);
+    });
+
+    container.style.display = "block";
+    selectedSuggestionIndex = -1;
+    updateSuggestionSelection();
+  }
+
+  function updateSuggestionSelection() {
+    if (!suggestionsContainer) return;
+
+    const suggestions = suggestionsContainer.querySelectorAll(".search-suggestion");
+    suggestions.forEach((suggestion, index) => {
+      if (index === selectedSuggestionIndex) {
+        suggestion.classList.add("selected");
+        (suggestion as HTMLElement).style.backgroundColor = "#f8f8f8";
+      } else {
+        suggestion.classList.remove("selected");
+        (suggestion as HTMLElement).style.backgroundColor = "transparent";
+      }
+    });
+  }
+
+  function hideSuggestions() {
+    if (suggestionsContainer) {
+      suggestionsContainer.style.display = "none";
+    }
+    selectedSuggestionIndex = -1;
+  }
+
+  function selectSuggestion(bang: typeof bangs[0]) {
+    const query = `!${bang.t} `;
+    searchInput.value = query;
+    searchInput.focus();
+    hideSuggestions();
+    // Trigger search after a brief delay to allow the input to update
+    setTimeout(() => {
+      const event = new KeyboardEvent("keypress", { key: "Enter" });
+      searchInput.dispatchEvent(event);
+    }, 10);
+  }
+
+  function getSuggestions(searchTerm: string): typeof bangs {
+    if (!searchTerm.trim()) return [];
+
+    const normalizedSearch = searchTerm.toLowerCase();
+
+    // If search starts with "!", search in bang triggers
+    if (normalizedSearch.startsWith("!")) {
+      const bangTrigger = normalizedSearch.slice(1);
+
+      // Find exact match first
+      const exactMatch = bangs.filter(b => b.t.toLowerCase() === bangTrigger);
+
+      // Then find partial matches, excluding the exact match
+      const partialMatches = bangs.filter(b =>
+        b.t.toLowerCase().includes(bangTrigger) &&
+        b.t.toLowerCase() !== bangTrigger
+      );
+
+      return [...exactMatch, ...partialMatches];
+    }
+
+    // If search doesn't start with "!", show popular bangs or bangs matching the search term
+    if (normalizedSearch.length >= 2) {
+      // Find matches in bang triggers and names
+      const triggerMatches = bangs.filter(b =>
+        b.t.toLowerCase().includes(normalizedSearch)
+      );
+
+      const nameMatches = bangs.filter(b =>
+        b.s.toLowerCase().includes(normalizedSearch) &&
+        !triggerMatches.includes(b)
+      );
+
+      return [...triggerMatches, ...nameMatches].slice(0, 6);
+    }
+
+    return [];
+  }
+
+  function handleSearchInput() {
+    const query = searchInput.value;
+    const suggestions = getSuggestions(query);
+
+    if (suggestions.length > 0) {
+      showSuggestions(suggestions);
+    } else {
+      hideSuggestions();
+    }
+  }
+
+  // Add input event listener for real-time suggestions
+  searchInput.addEventListener("input", handleSearchInput);
+
+  // Add keyboard navigation
+  searchInput.addEventListener("keydown", (e) => {
+    if (!suggestionsContainer || suggestionsContainer.style.display === "none") {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        // Show suggestions if they're hidden and we have input
+        const suggestions = getSuggestions(searchInput.value);
+        if (suggestions.length > 0) {
+          showSuggestions(suggestions);
+          selectedSuggestionIndex = e.key === "ArrowDown" ? 0 : suggestions.length - 1;
+          updateSuggestionSelection();
+          e.preventDefault();
+        }
+      }
+      return;
+    }
+
+    const suggestions = suggestionsContainer.querySelectorAll(".search-suggestion");
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, suggestions.length - 1);
+        updateSuggestionSelection();
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, 0);
+        updateSuggestionSelection();
+        break;
+      case "Enter":
+        if (selectedSuggestionIndex >= 0 && selectedSuggestionIndex < suggestions.length) {
+          e.preventDefault();
+          const selectedBang = getSuggestions(searchInput.value)[selectedSuggestionIndex];
+          if (selectedBang) {
+            selectSuggestion(selectedBang);
+          }
+        }
+        break;
+      case "Escape":
+        hideSuggestions();
+        break;
+    }
+  });
+
+  // Hide suggestions when clicking outside
+  document.addEventListener("click", (e) => {
+    if (suggestionsContainer &&
+        !suggestionsContainer.contains(e.target as Node) &&
+        e.target !== searchInput) {
+      hideSuggestions();
+    }
+  });
+
+  // Position suggestions container relative to search input
+  function positionSuggestionsContainer() {
+    if (!suggestionsContainer) return;
+
+    const searchBoxContainer = searchInput.closest(".search-box-container") as HTMLElement;
+    if (searchBoxContainer) {
+      searchBoxContainer.style.position = "relative";
+      searchBoxContainer.appendChild(suggestionsContainer);
+    }
+  }
+
+  // Position the suggestions container after DOM is ready
+  setTimeout(positionSuggestionsContainer, 0);
 }
 
 function renderSettingsPage() {
   const app = document.querySelector<HTMLDivElement>("#app")!;
 
   // Use all bangs, sorted alphabetically by their display name
-  const allBangs = bangs
-    .map(b => ({ t: b.t, s: b.s }))
-    .sort((a, b) => a.s.localeCompare(b.s));
 
   app.innerHTML = `
     <div class="settings-bg">
@@ -119,7 +376,6 @@ function renderSettingsPage() {
   const copyIcon = copyButton.querySelector("img")!;
   const urlInput = app.querySelector<HTMLInputElement>("#output-url")!;
   const defaultBangInput = app.querySelector<HTMLInputElement>("#default-bang-input")!;
-  const toast = app.querySelector<HTMLDivElement>("#toast")!;
 
   function updateUrlInput() {
     const bangValue = defaultBangInput.value.trim().toLowerCase();
@@ -135,6 +391,7 @@ function renderSettingsPage() {
   copyButton.addEventListener("click", async () => {
     await navigator.clipboard.writeText(urlInput.value);
     copyIcon.src = "/clipboard-check.svg";
+    const toast = app.querySelector<HTMLDivElement>("#toast")!;
     toast.textContent = "Copied!";
     toast.style.display = "block";
     toast.classList.add("show");
@@ -151,13 +408,13 @@ function renderSettingsPage() {
 }
 
 function noSearchDefaultPageRender() {
+  const app = document.querySelector<HTMLDivElement>("#app")!;
 
   const copyButton = app.querySelector<HTMLButtonElement>(".copy-button")!;
   const copyIcon = copyButton.querySelector("img")!;
   const urlInput = app.querySelector<HTMLInputElement>("#output-url")!;
   const bangPicker = app.querySelector<HTMLSelectElement>("#bang-picker")!;
   const bangSearch = app.querySelector<HTMLInputElement>("#bang-search")!;
-  const toast = app.querySelector<HTMLDivElement>("#toast")!;
 
   function updateUrlInput() {
     const selected = bangPicker.value;
@@ -176,9 +433,9 @@ function noSearchDefaultPageRender() {
     const normalizedSearch = search.startsWith("!") ? search.slice(1) : search;
 
     // Find exact match first
-    const exactMatch = allBangs.filter(b => b.t.toLowerCase() === normalizedSearch);
+    const exactMatch = bangs.filter(b => b.t.toLowerCase() === normalizedSearch);
     // Then find partial matches, excluding the exact match
-    const partialMatches = allBangs.filter(b =>
+    const partialMatches = bangs.filter(b =>
       (search === "" ||
         b.s.toLowerCase().includes(search) ||
         b.t.toLowerCase().includes(normalizedSearch)) &&
@@ -203,6 +460,7 @@ function noSearchDefaultPageRender() {
   copyButton.addEventListener("click", async () => {
     await navigator.clipboard.writeText(urlInput.value);
     copyIcon.src = "/clipboard-check.svg";
+    const toast = app.querySelector<HTMLDivElement>("#toast")!;
     toast.textContent = "Copied!";
     toast.style.display = "block";
     toast.classList.add("show");
