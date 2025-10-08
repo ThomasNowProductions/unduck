@@ -472,6 +472,91 @@ function noSearchDefaultPageRender() {
   });
 }
 
+function getMultipleBangUrls() {
+  const url = new URL(window.location.href);
+  const query = url.searchParams.get("q")?.trim() ?? "";
+  if (!query) {
+    noSearchDefaultPageRender();
+    return null;
+  }
+
+  // Extract all bangs from the query using regex
+  const bangMatches = query.match(/!(\S+)/gi);
+  if (!bangMatches || bangMatches.length === 0) {
+    return null;
+  }
+
+  const bangCandidates = bangMatches.map(match => match.slice(1).toLowerCase());
+
+  // Get defaultBang from URL param if present
+  const urlDefaultBang = url.searchParams.get("defaultBang")?.toLowerCase();
+  const urlDefaultBangObj = urlDefaultBang ? bangs.find((b) => b.t === urlDefaultBang) : undefined;
+
+  // Get defaultBang from localStorage or fallback to 'g'
+  const LS_DEFAULT_BANG = localStorage.getItem("default-bang") ?? "g";
+  const localStorageDefaultBangObj = bangs.find((b) => b.t === LS_DEFAULT_BANG);
+
+  // Remove all bangs from the query to get the search term
+  const cleanQuery = query.replace(/!\S+/gi, "").trim();
+
+  // If no search term provided, use domain URLs
+  if (cleanQuery === "") {
+    const urls: string[] = [];
+
+    bangCandidates.forEach(bangCandidate => {
+      // Precedence: explicit bang > url param > localStorage > 'g'
+      const selectedBang =
+        bangs.find((b) => b.t === bangCandidate) ||
+        urlDefaultBangObj ||
+        localStorageDefaultBangObj;
+
+      if (selectedBang) {
+        urls.push(`https://${selectedBang.d}`);
+      }
+    });
+
+    return urls.length > 0 ? urls : null;
+  }
+
+  // Generate search URLs for each bang
+  const urls: string[] = [];
+
+  bangCandidates.forEach(bangCandidate => {
+    // Precedence: explicit bang > url param > localStorage > 'g'
+    const selectedBang =
+      bangs.find((b) => b.t === bangCandidate) ||
+      urlDefaultBangObj ||
+      localStorageDefaultBangObj;
+
+    if (selectedBang) {
+      // Format of the url is:
+      // https://www.google.com/search?q={{{s}}}
+      const searchUrl = selectedBang.u.replace(
+        "{{{s}}}",
+        // Replace %2F with / to fix formats like "!ghr+t3dotgg/unduck"
+        encodeURIComponent(cleanQuery).replace(/%2F/g, "/"),
+      );
+      urls.push(searchUrl);
+    }
+  });
+
+  return urls.length > 0 ? urls : null;
+}
+
+function openMultipleTabs(urls: string[]) {
+  // Open the first URL in the current tab
+  if (urls.length > 0) {
+    window.location.href = urls[0];
+  }
+
+  // Open the remaining URLs in new tabs with a small delay to ensure they open properly
+  for (let i = 1; i < urls.length; i++) {
+    setTimeout(() => {
+      window.open(urls[i], '_blank');
+    }, i * 100); // Stagger opening by 100ms each
+  }
+}
+
 function getBangredirectUrl() {
   const url = new URL(window.location.href);
   const query = url.searchParams.get("q")?.trim() ?? "";
@@ -517,6 +602,15 @@ function getBangredirectUrl() {
 }
 
 function doRedirect() {
+  // First check if there are multiple bangs in the query
+  const multipleUrls = getMultipleBangUrls();
+  if (multipleUrls && multipleUrls.length > 1) {
+    // If multiple bangs found, open them in separate tabs
+    openMultipleTabs(multipleUrls);
+    return;
+  }
+
+  // Otherwise, use the original single bang logic
   const searchUrl = getBangredirectUrl();
   if (!searchUrl) return;
   window.location.replace(searchUrl);
